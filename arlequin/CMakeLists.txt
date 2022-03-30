@@ -3,10 +3,12 @@ target_include_directories(arlequin PUBLIC
 
 set(MATERIAL_HEADERS
     TPZMatPoissonCS.h
+    TPZMixedDarcyFlowArlequin.h
   )
 
 set(MATERIAL_SRCS
     TPZMatPoissonCS.cpp
+    TPZMixedDarcyFlowArlequin.cpp
   )
 
 
@@ -25,11 +27,13 @@ set (CONFIG_H "${CMAKE_CURRENT_SOURCE_DIR}/arlequin_config.h")
 configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/arlequin_config.h.in" ${CONFIG_H})
 
 set(UTIL_HEADERS
-  
+  GmshFileWriter.h
+  ArlequinGeoMeshCreator.h
   )
 
 set(UTIL_SRCS
-  
+  GmshFileWriter.cpp
+  ArlequinGeoMeshCreator.cpp
   )
 
 target_sources(arlequin PRIVATE

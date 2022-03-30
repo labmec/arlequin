@@ -25,20 +25,56 @@ void TPZMatPoissonCS<TVar>::Contribute(const TPZVec<TPZMaterialDataT<TVar>> &dat
     if(this->HasForcingFunction()){
         this->fForcingFunction(datavec[0].x,force);
     }
-    const auto &phi = datavec[0].phi;
-    const auto &dphi = datavec[0].dphix;
-    const auto nshape = datavec[0].phi.Rows();
-	for(int i = 0; i < nshape; i++){
-		for(int j = 0; j < nshape; j++){
+    const auto &phiCoarse = datavec[0].phi;
+    const auto &dphiCoarse = datavec[0].dphix;
+    const auto nshapeCoarse = datavec[0].phi.Rows();
+	
+    for(int i = 0; i < nshapeCoarse; i++){
+		for(int j = 0; j < nshapeCoarse; j++){
             STATE dphiIdphiJ = 0;
             for(int x = 0; x < fDim; x++){
-                dphiIdphiJ += dphi.GetVal(x,i) * dphi.GetVal(x,j);
+                dphiIdphiJ += dphiCoarse.GetVal(x,i) * dphiCoarse.GetVal(x,j);
             }
             ek(i, j) += weight*fScale*dphiIdphiJ;
         }//forj
         for(auto l = 0; l < nLoads; l++)
-            ef(i,l) += weight*fScale*phi.GetVal(i,0)*force[l];
+            ef(i,l) += weight*fScale*phiCoarse.GetVal(i,0)*force[l];
     }//for i
+
+    const auto &phiFine = datavec[1].phi;
+    const auto &dphiFine = datavec[1].dphix;
+    const auto nshapeFine = datavec[1].phi.Rows();
+	
+    for(int i = 0; i < nshapeFine; i++){
+		for(int j = 0; j < nshapeFine; j++){
+            STATE dphiIdphiJ = 0;
+            for(int x = 0; x < fDim; x++){
+                dphiIdphiJ += dphiFine.GetVal(x,i) * dphiFine.GetVal(x,j);
+            }
+            ek(i, j) += weight*fScale*dphiIdphiJ;
+        }//forj
+        for(auto l = 0; l < nLoads; l++)
+            ef(i,l) += weight*fScale*phiFine.GetVal(i,0)*force[l];
+    }//for i
+
+    
+    // const auto &phiFine = datavec[1].phi;
+    // const auto &dphiFine = datavec[1].dphix;
+    // const auto nshapeFine = datavec[1].phi.Rows();
+	
+    // for(int i = 0; i < nshapeFine; i++){
+	// 	for(int j = 0; j < nshapeFine; j++){
+    //         STATE dphiIdphiJ = 0;
+    //         for(int x = 0; x < fDim; x++){
+    //             dphiIdphiJ += dphiFine.GetVal(x,i) * dphiFine.GetVal(x,j);
+    //         }
+    //         ek(i, j) += weight*fScale*dphiIdphiJ;
+    //     }//forj
+    //     for(auto l = 0; l < nLoads; l++)
+    //         ef(i,l) += weight*fScale*phiFine.GetVal(i,0)*force[l];
+    // }//for i
+
+
 }
 
 template<class TVar>

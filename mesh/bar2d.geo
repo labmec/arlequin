@@ -14,17 +14,16 @@ Line(1) = {1, 2};
 Line(2) = {2, 3};
 //+
 Line(3) = {3, 4};
+
+Transfinite Curve {1, 2, 3} = 2 Using Progression 1;
 //+
-//Physical Point("Point0") = {1};
+Extrude {0, 1, 0} {
+  Curve{1,2,3}; Layers{1}; Recombine;
+}
+
 //+
-//Physical Point("Point1") = {2};
+Physical Surface("Global") = {7};
 //+
-//Physical Point("Point2") = {3};
+Physical Surface("Gluing") = {11};
 //+
-//Physical Point("Point3") = {4};
-//+
-Physical Curve("Global") = {1};
-//+
-Physical Curve("Gluing") = {2};
-//+
-Physical Curve("Local") = {3};
+Physical Surface("Local") = {15};
