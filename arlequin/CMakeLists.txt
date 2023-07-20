@@ -28,12 +28,12 @@ configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/arlequin_config.h.in" ${CONFIG_H})
 
 set(UTIL_HEADERS
   GmshFileWriter.h
-  ArlequinGeoMeshCreator.h
+  ArlequinApproxSpaceCreator.h
   )
 
 set(UTIL_SRCS
   GmshFileWriter.cpp
-  ArlequinGeoMeshCreator.cpp
+  ArlequinApproxSpaceCreator.cpp
   )
 
 target_sources(arlequin PRIVATE

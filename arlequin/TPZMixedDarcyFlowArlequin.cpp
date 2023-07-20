@@ -50,54 +50,69 @@ void TPZMixedDarcyFlowArlequin::Contribute(const TPZVec<TPZMaterialDataT<STATE>>
     const STATE inv_perm = 1 / perm;
     
     // Setting the phis
-    TPZFMatrix<REAL> &phiQ = datavec[0].phi;
-    TPZFMatrix<REAL> &phip = datavec[1].phi;
-    TPZFMatrix<REAL> &dphiQ = datavec[0].dphix;
-    TPZFMatrix<REAL> &dphiP = datavec[1].dphix;
-    TPZFMatrix<REAL> &divQ = datavec[0].divphi;
-    TPZFNMatrix<9, REAL> dphiPXY(3, dphiP.Cols());
-    TPZAxesTools<REAL>::Axes2XYZ(dphiP, dphiPXY, datavec[1].axes);
+    TPZFMatrix<REAL> &phiGlobal = datavec[0].phi;
+    // TPZFMatrix<REAL> &phiLocal = datavec[1].phi;
+    TPZFMatrix<REAL> &phiGluing = datavec[1].phi;
+    TPZFMatrix<REAL> &dphiGlobal = datavec[0].dphix;
+    // TPZFMatrix<REAL> &dphiLocal = datavec[1].dphix;
+    TPZFMatrix<REAL> &dphiGluing = datavec[1].dphix;
 
-    REAL &faceSize = datavec[0].HSize;
-
-    int phrq, phrp;
-    phrp = phip.Rows();
-    phrq = phiQ.Rows();//datavec[0].fVecShapeIndex.NElements();
-
-    int nactive = 0;
-    for (const auto &i : datavec) {
-        if (i.fActiveApproxSpace) {
-            nactive++;
-        }
-    }
-// #ifdef PZDEBUG
-//     if (nactive == 4) {
-//         int phrgb = datavec[2].phi.Rows();
-//         int phrub = datavec[3].phi.Rows();
-//         if (phrp + phrq + phrgb + phrub != ek.Rows()) {
-//             DebugStop();
-//         }
-//     } else {
-//         if (phrp + phrq != ek.Rows()) {
-//             DebugStop();
-//         }
-//     }
-// #endif
-
-
+    int nShapeGlobal, nShapeLocal, nShapeGluing;
+    nShapeGlobal = phiGlobal.Rows();
+    // nShapeLocal = phiLocal.Rows();
+    nShapeGluing = phiGluing.Rows();
     
-    //Calculate the matrix contribution for flux. Matrix A
-    for(int i = 0; i < phrq; i++){
-		for(int j = 0; j < phrq; j++){
+    //Calculate the matrix contribution for Global model
+    for(int i = 0; i < nShapeGlobal; i++){
+		for(int j = 0; j < nShapeGlobal; j++){
             STATE dphiIdphiJ = 0;
             for(int x = 0; x < fDim; x++){
-                dphiIdphiJ += dphiQ.GetVal(x,i) * dphiQ.GetVal(x,j);
+                dphiIdphiJ += dphiGlobal.GetVal(x,i) * dphiGlobal.GetVal(x,j);
             }
             ek(i, j) += weight*dphiIdphiJ;
         }//forj
         // for(auto l = 0; l < nLoads; l++)
         //     ef(i,l) += weight*phiQ.GetVal(i,0)*force[l];
     }//for i
+
+    // //Calculate the matrix contribution for Local Model
+    // for(int i = 0; i < nShapeLocal; i++){
+	// 	for(int j = 0; j < nShapeLocal; j++){
+    //         STATE dphiIdphiJ = 0;
+    //         for(int x = 0; x < fDim; x++){
+    //             dphiIdphiJ += dphiLocal.GetVal(x,i) * dphiLocal.GetVal(x,j);
+    //         }
+    //         ek(i, j) += weight*dphiIdphiJ;
+    //     }//forj
+    //     // for(auto l = 0; l < nLoads; l++)
+    //     //     ef(i,l) += weight*phiQ.GetVal(i,0)*force[l];
+    // }//for i
+
+    for(int i = 0; i < nShapeGluing; i++){
+		for(int j = 0; j < nShapeGluing; j++){
+            STATE phiIphiJ = 0;
+            for(int x = 0; x < fDim; x++){
+                phiIphiJ += phiGluing.GetVal(x,i) * phiGluing.GetVal(x,j);
+            }
+            ek(i, j) += weight*phiIphiJ;
+        }//forj
+        // for(auto l = 0; l < nLoads; l++)
+        //     ef(i,l) += weight*phiQ.GetVal(i,0)*force[l];
+    }//for i
+
+    // for(int i = 0; i < nShapeGlobal; i++){
+	// 	for(int j = 0; j < nShapeGluing; j++){
+    //         STATE phiIphiJ = 0;
+    //         for(int x = 0; x < fDim; x++){
+    //             phiIphiJ += phiGlobal.GetVal(x,i) * phiGluing.GetVal(x,j);
+    //         }
+    //         ek(i, j) += weight*phiIphiJ;
+    //     }//forj
+    //     // for(auto l = 0; l < nLoads; l++)
+    //     //     ef(i,l) += weight*phiQ.GetVal(i,0)*force[l];
+    // }//for i
+
+
 
     // Coupling terms between flux and pressure. Matrix B
     // for (int iq = 0; iq < phrq; iq++) {
