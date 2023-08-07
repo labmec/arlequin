@@ -4,11 +4,13 @@ target_include_directories(arlequin PUBLIC
 set(MATERIAL_HEADERS
     TPZMatPoissonCS.h
     TPZMixedDarcyFlowArlequin.h
+    TPZMultiphysicsInterfaceElArlequin.h
   )
 
 set(MATERIAL_SRCS
     TPZMatPoissonCS.cpp
     TPZMixedDarcyFlowArlequin.cpp
+    TPZMultiphysicsInterfaceElArlequin.cpp
   )
 
 

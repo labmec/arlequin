@@ -6,6 +6,11 @@
 #include "TPZMatPoissonCS.h"
 #include "TPZLagrangeMultiplierCS.h"
 #include "pzintel.h"
+#include "pzgeoquad.h"
+#include "pzshapequad.h"
+#include "TPZCompElH1.h"
+#include "TPZMultiphysicsInterfaceElArlequin.h"
+
 
 ArlequinApproxSpaceCreator::ArlequinApproxSpaceCreator(TPZGeoMesh *gmesh, int order){
     fGeoMesh = gmesh;
@@ -23,7 +28,7 @@ void ArlequinApproxSpaceCreator::CreateGeoElements(){
             for (int i = 0; i < gel->NCornerNodes(); i++)
             {
                 corner[i] = gel->SideNodeIndex(i,0);
-                std::cout << "Corner i " << i << " " << corner[i]<< std::endl;
+                // std::cout << "Corner i " << i << " " << corner[i]<< std::endl;
             }
             int nsides = gel->NSides();
             auto newId = fGeoMesh->CreateUniqueElementId();
@@ -33,29 +38,23 @@ void ArlequinApproxSpaceCreator::CreateGeoElements(){
             TPZGeoElBC gelbcWrapglo(geosideglo, EWrapGlob);
             TPZGeoElSide gelWrapSideglo(gelbcWrapglo.CreatedElement(),gelbcWrapglo.CreatedElement()->NSides()-1);
             TPZGeoElBC gelbcglo(gelWrapSideglo, EInter);
-
-            newId = fGeoMesh->CreateUniqueElementId();
-            fGeoMesh->CreateGeoElement(gel->Type(),corner,ELocal,newId);
-            TPZGeoEl* gelLocal = fGeoMesh->ElementVec()[newId];
-            // gelLocal->ResetReference();
-            TPZGeoElSide geosideloc(gel,nsides-1);
+            TPZGeoElSide geosideloc(gelbcglo.CreatedElement(),nsides-1);
             TPZGeoElBC gelbcWraploc(geosideloc, EWrapLoc);
             TPZGeoElSide gelWrapSideloc(gelbcWraploc.CreatedElement(),gelbcWraploc.CreatedElement()->NSides()-1);
-            TPZGeoElBC gelbcloc(gelWrapSideloc, EInter);
-            // gel->ResetReference();
+            TPZGeoElBC gelbcloc(gelWrapSideloc, ELocal);
         }
-        if (gel->MaterialId() == ELocal){
-            auto newId = fGeoMesh->CreateUniqueElementId();
-            TPZVec<int64_t> corner(gel->NCornerNodes());
-            for (int i = 0; i < gel->NCornerNodes(); i++)
-            {
-                corner[i] = gel->SideNodeIndex(i,0);
-                std::cout << "Corner i " << i << " " << corner[i]<< std::endl;
-            }
+        // if (gel->MaterialId() == ELocal){
+        //     auto newId = fGeoMesh->CreateUniqueElementId();
+        //     TPZVec<int64_t> corner(gel->NCornerNodes());
+        //     for (int i = 0; i < gel->NCornerNodes(); i++)
+        //     {
+        //         corner[i] = gel->SideNodeIndex(i,0);
+        //         std::cout << "Corner i " << i << " " << corner[i]<< std::endl;
+        //     }
             
-            fGeoMesh->CreateGeoElement(gel->Type(),corner,EGlobal,newId);
-            // gel->ResetReference();
-        }
+        //     fGeoMesh->CreateGeoElement(gel->Type(),corner,EGlobal,newId);
+        //     // gel->ResetReference();
+        // }
     }
     fGeoMesh->BuildConnectivity();
     // PrintGeoMesh(fGeoMesh);
@@ -66,7 +65,10 @@ void ArlequinApproxSpaceCreator::RefineLocalModel(){
     int64_t nel = fGeoMesh->NElements();
     for (int i = 0; i < nel; i++){
         TPZGeoEl* gel = fGeoMesh->ElementVec()[i];
-        if (gel->MaterialId() == EGluing || gel->MaterialId() == ELocal || gel->MaterialId() == EWrapLoc || gel->MaterialId() == EWrapGlob || gel->MaterialId() == EInter){
+        //This makes the Lagrange Multiplier to be defined in the Fine mesh
+        // if (gel->MaterialId() == EGluing || gel->MaterialId() == ELocal || gel->MaterialId() == EWrapLoc || gel->MaterialId() == EWrapGlob || gel->MaterialId() == EInter){
+        //This makes the Lagrange Multiplier to be defined in the Coarse mesh
+        if (gel->MaterialId() == ELocal){
 
             TPZManVector<TPZGeoEl*,10> children;
             fGeoMesh->ElementVec()[i]->Divide(children);
@@ -139,12 +141,18 @@ TPZCompMesh * ArlequinApproxSpaceCreator::GlobalCompMesh(){
     auto mat2 = new TPZNullMaterial(EWrapGlob,fDimension);
     cmesh->InsertMaterialObject(mat2);
 
+    TPZFMatrix<STATE> val1(1,1,0.);
+    TPZManVector<STATE> val2(1,0.);
+    TPZBndCondT<STATE> *BCond1 = mat->CreateBC(mat, EDirichlet1, 0, val1, val2);
+    cmesh->InsertMaterialObject(BCond1);
+
+
     cmesh->SetAllCreateFunctionsContinuous();
     cmesh->AutoBuild();
 
-    // std::string cmesh1 = "CMeshGlobal.txt";
-    // std::ofstream myfile1(cmesh1);
-    // cmesh->Print(myfile1);
+    std::string cmesh1 = "CMeshGlobal.txt";
+    std::ofstream myfile1(cmesh1);
+    cmesh->Print(myfile1);
 
     return cmesh;
 };
@@ -161,12 +169,17 @@ TPZCompMesh * ArlequinApproxSpaceCreator::LocalCompMesh(){
     auto mat2 = new TPZNullMaterial(EWrapLoc,fDimension);
     cmesh->InsertMaterialObject(mat2);
 
+    TPZFMatrix<STATE> val1(1,1,0.);
+    TPZManVector<STATE> val2(1,1.);
+    TPZBndCondT<STATE> *BCond1 = mat->CreateBC(mat, EDirichlet2, 0, val1, val2);
+    cmesh->InsertMaterialObject(BCond1);
+
     cmesh->SetAllCreateFunctionsContinuous();
     cmesh->AutoBuild();
 
-    // std::string cmesh1 = "CMeshLocal.txt";
-    // std::ofstream myfile1(cmesh1);
-    // cmesh->Print(myfile1);
+    std::string cmesh1 = "CMeshLocal.txt";
+    std::ofstream myfile1(cmesh1);
+    cmesh->Print(myfile1);
 
     return cmesh;
 };
@@ -265,8 +278,17 @@ TPZMultiphysicsCompMesh* ArlequinApproxSpaceCreator::ArlequinCompMesh(){
 
     auto mat = new TPZMatPoissonCS(EGlobal,fDimension);
     cmesh->InsertMaterialObject(mat);
+    TPZFMatrix<STATE> val1(1,1,0.);
+    TPZManVector<STATE> val2(1,0.);
+    TPZBndCondT<STATE> *BCond2 = mat->CreateBC(mat, EDirichlet1, 0, val1, val2);
+    cmesh->InsertMaterialObject(BCond2);
+
     auto mat2 = new TPZMatPoissonCS(ELocal,fDimension);
     cmesh->InsertMaterialObject(mat2);
+    val2[0] = 1.;
+    TPZBndCondT<STATE> *BCond1 = mat2->CreateBC(mat2, EDirichlet2, 0, val1, val2);
+    cmesh->InsertMaterialObject(BCond1);
+
     auto mat3 = new TPZNullMaterialCS<>(EWrapLoc);
     cmesh->InsertMaterialObject(mat3);
     auto mat5 = new TPZNullMaterialCS<>(EWrapGlob);
@@ -302,12 +324,11 @@ TPZMultiphysicsCompMesh* ArlequinApproxSpaceCreator::ArlequinCompMesh(){
 
         auto gelint = gelside.HasNeighbour(EInter);
         if (!gelint.Element()) DebugStop();
-        // TPZGeoEl *gelIntface = gel->Neighbour(nsides-1).Element();
-        // if (gelIntface->MaterialId() != EInter) continue;//Is not in the gluing zone
-    
+        
         // Creates Multiphysics Interface element
         int64_t index;
-        TPZMultiphysicsInterfaceElement *intf = new TPZMultiphysicsInterfaceElement(*cmesh,gelint.Element(),celneigh,celside);
+        TPZMultiphysicsInterfaceElementArlequin *intf = new TPZMultiphysicsInterfaceElementArlequin(*cmesh,gelint.Element(),celside,celneigh);
+       
     }
 
     return cmesh;

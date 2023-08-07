@@ -27,3 +27,8 @@ Physical Surface("Global") = {7};
 Physical Surface("Gluing") = {11};
 //+
 Physical Surface("Local") = {15};
+
+Physical Curve("Left") = {5};
+Physical Curve("Right") = {14};
+
+Physical Curve("Neumann") = {1,2,3,4,8,12};

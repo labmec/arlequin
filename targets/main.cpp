@@ -6,7 +6,6 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <iostream>
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -28,6 +27,7 @@
 #include "pzgeoel.h"
 #include "ArlequinApproxSpaceCreator.h"
 #include "TPZRefPatternDataBase.h"
+#include "TPZVTKGenerator.h"
 
 
 
@@ -85,6 +85,8 @@ int main(int argc, char* argv[]){
     ArlequinApproxSpaceCreator arlequinCreator(gmeshCoarse,pOrder);
     arlequinCreator.CreateGeoElements();
     gmeshCoarse = arlequinCreator.GeoMesh();
+    arlequinCreator.RefineLocalModel();
+    // arlequinCreator.RefineLocalModel();
     // arlequinCreator.RefineLocalModel();
 
     // Cria a malha multifísica com as 3 malhas usando interface CompEl.
@@ -98,14 +100,30 @@ int main(int argc, char* argv[]){
     TPZVTKGeoMesh::PrintCMeshVTK(cmeshmulti, vtkfile, true);
 
     // //Create analysis environment
-    TPZLinearAnalysis an;
-    an.SetCompMesh(cmeshmulti,false);
+    // TPZLinearAnalysis an(cmeshmulti,RenumType::ESloan);
+    // TPZLinearAnalysis an(cmeshmulti,RenumType::ESloan);
+    TPZLinearAnalysis an(cmeshmulti,RenumType::ENone);
     TPZSkylineStructMatrix<REAL> matskl(cmeshmulti);
     an.SetStructuralMatrix(matskl);
     TPZStepSolver<STATE> step;
     step.SetDirect(ELDLt);
     an.SetSolver(step);
     an.Run();
+
+    // an.Solution().Print("Sol",std::cout);
+
+    // TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(cmeshmulti->MeshVector(), cmeshmulti);
+    const std::string plotfile = "myfile";//sem o .vtk no final
+    constexpr int vtkRes{0};
+
+
+    TPZVec<std::string> fields = {
+    "Solution",
+    "Derivative",
+    "LagrangeMultiplier"};
+    auto vtk = TPZVTKGenerator(cmeshmulti, fields, plotfile, vtkRes);
+
+    vtk.Do();
     return 0;
 }
 
@@ -120,9 +138,12 @@ TPZGeoMesh* ReadMeshFromGmsh(std::string file_name)
         // essa interface permite voce mapear os nomes dos physical groups para
         // o matid que voce mesmo escolher
         TPZManVector<std::map<std::string,int>,4> stringtoint(4);
-        stringtoint[1]["Global"] = EGlobal;
-        stringtoint[1]["Gluing"] = EGluing;
-        stringtoint[1]["Local"] = ELocal;
+        stringtoint[2]["Global"] = EGlobal;
+        stringtoint[2]["Gluing"] = EGluing;
+        stringtoint[2]["Local"] = ELocal;
+        stringtoint[1]["Left"] = EDirichlet1;
+        stringtoint[1]["Right"] = EDirichlet2;
+        stringtoint[1]["Neumann"] = ENeumann;
 
         reader.SetDimNamePhysical(stringtoint);
         reader.GeometricGmshMesh(file_name,gmesh);

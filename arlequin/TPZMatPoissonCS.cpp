@@ -84,9 +84,12 @@ void TPZMatPoissonCS<TVar>::ContributeBC(const TPZVec<TPZMaterialDataT<TVar>> &d
                                          TPZBndCondT<TVar> &bc)
 {
 	
-	const auto &phi = datavec[0].phi;
-    const auto &dphi = datavec[0].dphix;
-	const int phr = phi.Rows();
+	const auto &phiGlo = datavec[0].phi;
+    const auto &dphiGlo = datavec[0].dphix;
+	const auto &phiLoc = datavec[1].phi;
+    const auto &dphiLoc = datavec[1].dphix;
+	const int phrG = phiGlo.Rows();
+	const int phrL = phiLoc.Rows();
     constexpr int nvars = 1;
     const auto nloads = this->fNumLoadCases;
     const auto &bcNumLoads =
@@ -114,12 +117,22 @@ void TPZMatPoissonCS<TVar>::ContributeBC(const TPZVec<TPZMaterialDataT<TVar>> &d
         // Dirichlet condition
     case 0 : {      
         for(auto iv = 0; iv < nvars; iv++){
-            for(auto in = 0 ; in < phr; in++) {
+            for(auto in = 0 ; in < phrG; in++) {
                 for(auto l=0; l < nloads; l++)
                     ef(nvars*in+iv,l) +=
-                        (TVar)TPZMaterial::fBigNumber * v2[nvars*l+iv] * (TVar)phi.GetVal(in,0) * (TVar)weight;
-                for (auto jn = 0 ; jn < phr; jn++) {
-                    ek(nvars*in+iv,nvars*jn+iv) += TPZMaterial::fBigNumber * phi.GetVal(in,0) * phi.GetVal(jn,0) * weight;
+                        (TVar)TPZMaterial::fBigNumber * v2[nvars*l+iv] * (TVar)phiGlo.GetVal(in,0) * (TVar)weight;
+                for (auto jn = 0 ; jn < phrG; jn++) {
+                    ek(nvars*in+iv,nvars*jn+iv) += TPZMaterial::fBigNumber * phiGlo.GetVal(in,0) * phiGlo.GetVal(jn,0) * weight;
+                }//jn
+            }//in
+        }//iv
+        for(auto iv = 0; iv < nvars; iv++){
+            for(auto in = 0 ; in < phrL; in++) {
+                for(auto l=0; l < nloads; l++)
+                    ef(nvars*in+iv,l) +=
+                        (TVar)TPZMaterial::fBigNumber * v2[nvars*l+iv] * (TVar)phiLoc.GetVal(in,0) * (TVar)weight;
+                for (auto jn = 0 ; jn < phrL; jn++) {
+                    ek(nvars*in+iv,nvars*jn+iv) += TPZMaterial::fBigNumber * phiLoc.GetVal(in,0) * phiLoc.GetVal(jn,0) * weight;
                 }//jn
             }//in
         }//iv
@@ -128,9 +141,15 @@ void TPZMatPoissonCS<TVar>::ContributeBC(const TPZVec<TPZMaterialDataT<TVar>> &d
 		// Neumann condition
     case 1 : {
         for(auto iv = 0; iv < nvars; iv++){
-            for(auto in = 0 ; in < phr; in++) {
+            for(auto in = 0 ; in < phrG; in++) {
                 for(auto l = 0; l < nloads; l++)
-                    ef(nvars*in+iv,l) += v2[nvars*l+iv] * (TVar)fScale * (TVar)phi.GetVal(in,0) * (TVar)weight;
+                    ef(nvars*in+iv,l) += v2[nvars*l+iv] * (TVar)fScale * (TVar)phiGlo.GetVal(in,0) * (TVar)weight;
+            }//in
+        }//iv
+        for(auto iv = 0; iv < nvars; iv++){
+            for(auto in = 0 ; in < phrL; in++) {
+                for(auto l = 0; l < nloads; l++)
+                    ef(nvars*in+iv,l) += v2[nvars*l+iv] * (TVar)fScale * (TVar)phiLoc.GetVal(in,0) * (TVar)weight;
             }//in
         }//iv
         break;
@@ -138,16 +157,28 @@ void TPZMatPoissonCS<TVar>::ContributeBC(const TPZVec<TPZMaterialDataT<TVar>> &d
         //Robin condition
     case 2 : {
         for(auto iv = 0; iv < nvars; iv++){
-            for(auto in = 0 ; in < phr; in++) {
+            for(auto in = 0 ; in < phrG; in++) {
                 for(auto l=0; l < nloads; l++)
                     ef(nvars*in+iv,l) +=
-                        (TVar)TPZMaterial::fBigNumber * v2[nvars*l+iv] * (TVar)phi.GetVal(in,0) * (TVar)weight;
-                for (auto jn = 0 ; jn < phr; jn++) {
+                        (TVar)TPZMaterial::fBigNumber * v2[nvars*l+iv] * (TVar)phiGlo.GetVal(in,0) * (TVar)weight;
+                for (auto jn = 0 ; jn < phrG; jn++) {
                     ek(nvars*in+iv,nvars*jn+iv) +=
-                        TPZMaterial::fBigNumber * v1.GetVal(iv,0) * dphi.GetVal(0,in) * dphi.GetVal(0,jn) * weight;
+                        TPZMaterial::fBigNumber * v1.GetVal(iv,0) * dphiGlo.GetVal(0,in) * dphiGlo.GetVal(0,jn) * weight;
                 }//jn
             }//in
         }//iv
+        for(auto iv = 0; iv < nvars; iv++){
+            for(auto in = 0 ; in < phrL; in++) {
+                for(auto l=0; l < nloads; l++)
+                    ef(nvars*in+iv,l) +=
+                        (TVar)TPZMaterial::fBigNumber * v2[nvars*l+iv] * (TVar)phiLoc.GetVal(in,0) * (TVar)weight;
+                for (auto jn = 0 ; jn < phrL; jn++) {
+                    ek(nvars*in+iv,nvars*jn+iv) +=
+                        TPZMaterial::fBigNumber * v1.GetVal(iv,0) * dphiLoc.GetVal(0,in) * dphiLoc.GetVal(0,jn) * weight;
+                }//jn
+            }//in
+        }//iv
+        break;
     }		
     default:{
         std::cout << __PRETTY_FUNCTION__ << " at line " << __LINE__ << " not implemented\n";
@@ -170,12 +201,14 @@ template<class TVar>
 int TPZMatPoissonCS<TVar>::VariableIndex(const std::string &name) const{
 	if(!strcmp("Solution",name.c_str())) return ESolution;
     if(!strcmp("Derivative",name.c_str())) return EDerivative;
+    if(!strcmp("LagrangeMultiplier",name.c_str())) return ELagrangeMult;
 	return TPZMaterial::VariableIndex(name);
 }
 
 template<class TVar>
 int TPZMatPoissonCS<TVar>::NSolutionVariables(int var) const{
 	if(var == ESolution) return 1;
+	if(var == ELagrangeMult) return 1;
     else if (var == EDerivative) {
         return fDim;
     }
@@ -187,22 +220,53 @@ template<class TVar>
 void TPZMatPoissonCS<TVar>::Solution(const TPZVec<TPZMaterialDataT<TVar>> &datavec,
                                      int var, TPZVec<TVar> &solOut)
 {
-    const auto &sol = datavec[0].sol[this->fPostProcIndex];
-    const auto &dsol = datavec[0].dsol[this->fPostProcIndex];
+    const auto &solGlo = datavec[0].sol[this->fPostProcIndex];
+    const auto &dsolGlo = datavec[0].dsol[this->fPostProcIndex];
+    const auto &solLoc = datavec[1].sol[this->fPostProcIndex];
+    const auto &dsolLoc = datavec[1].dsol[this->fPostProcIndex];
+    const auto &solLag = datavec[2].sol[this->fPostProcIndex];
+    const auto &dsolLag = datavec[2].dsol[this->fPostProcIndex];
 	if (var == ESolution){
-        solOut.Resize(sol.size());
-        for (int i=0; i<sol.size(); i++) {
-            solOut[i] = sol[i]/fScale;
+        if (solGlo.size() > 0){
+            solOut.Resize(solGlo.size());
+            for (int i=0; i<solGlo.size(); i++) {
+                solOut[i] = solGlo[i]/fScale;
+            }
+            return; 
+        } else if (solLoc.size() > 0){
+            solOut.Resize(solLoc.size());
+            for (int i=0; i<solLoc.size(); i++) {
+                solOut[i] = solLoc[i]/fScale;
+            }
+            return; 
+        } else {
+            DebugStop();
         }
-		return;
 	}
     if (var == EDerivative) {
-        solOut.Resize(fDim);
-        for (int i=0; i<fDim; i++) {
-            solOut[i] = dsol.GetVal(i,0)/fScale;
+        if (solGlo.size() > 0){
+            solOut.Resize(fDim);
+            for (int i=0; i<fDim; i++) {
+                solOut[i] = dsolGlo.GetVal(i,0)/fScale;
+            }
+            return;
+        } else if (solLoc.size() > 0){
+            solOut.Resize(fDim);
+            for (int i=0; i<fDim; i++) {
+                solOut[i] = dsolLoc.GetVal(i,0)/fScale;
+            }
+            return;
+        } else {
+            DebugStop();
         }
-        return;
     }
+    if (var == ELagrangeMult){
+        solOut.Resize(solLag.size());
+        for (int i=0; i<solLag.size(); i++) {
+            solOut[i] = solLag[i]/fScale;
+        }
+        return; 
+	}
 }
 
 template<class TVar>

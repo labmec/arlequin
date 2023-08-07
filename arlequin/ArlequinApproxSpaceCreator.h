@@ -12,7 +12,7 @@
 #include "TPZMultiphysicsCompMesh.h"
 #include "arlequin_config.h"
 
-enum EArlequinMatId {ENone, EGlobal, EGluing, ELocal, EWrapGlob, EWrapLoc, EInter};
+enum EArlequinMatId {ENone, EGlobal, EGluing, ELocal, EWrapGlob, EWrapLoc, EInter, EDirichlet1, EDirichlet2, ENeumann};
 
 class ArlequinApproxSpaceCreator{
 
