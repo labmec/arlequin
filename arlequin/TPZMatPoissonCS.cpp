@@ -29,6 +29,14 @@ void TPZMatPoissonCS<TVar>::Contribute(const TPZVec<TPZMaterialDataT<TVar>> &dat
     const auto &dphiCoarse = datavec[0].dphix;
     const auto nshapeCoarse = datavec[0].phi.Rows();
 	
+    // if (datavec[0].x[0] >= 1. && datavec[0].x[0] <= 2.){
+    //     fScale = 0.5;
+    // } else {
+    //     fScale = 1.;
+    // }
+    
+    // std::cout << "Xcoarse = " << datavec[0].x[0] << " , fScale = " << fScale << std::endl;
+    // std::cout << "XFine   = " << datavec[1].x[0] << " , fScale = " << fScale << std::endl;
     for(int i = 0; i < nshapeCoarse; i++){
 		for(int j = 0; j < nshapeCoarse; j++){
             STATE dphiIdphiJ = 0;
@@ -44,7 +52,11 @@ void TPZMatPoissonCS<TVar>::Contribute(const TPZVec<TPZMaterialDataT<TVar>> &dat
     const auto &phiFine = datavec[1].phi;
     const auto &dphiFine = datavec[1].dphix;
     const auto nshapeFine = datavec[1].phi.Rows();
-	
+	// if (datavec[1].x[0] >= 1. && datavec[1].x[0] <= 2.){
+    //     fScale = 0.5;
+    // } else {
+    //     fScale = 1.;
+    // }
     for(int i = 0; i < nshapeFine; i++){
 		for(int j = 0; j < nshapeFine; j++){
             STATE dphiIdphiJ = 0;
@@ -201,7 +213,7 @@ template<class TVar>
 int TPZMatPoissonCS<TVar>::VariableIndex(const std::string &name) const{
 	if(!strcmp("Solution",name.c_str())) return ESolution;
     if(!strcmp("Derivative",name.c_str())) return EDerivative;
-    if(!strcmp("LagrangeMultiplier",name.c_str())) return ELagrangeMult;
+    // if(!strcmp("LagrangeMultiplier",name.c_str())) return ELagrangeMult;
 	return TPZMaterial::VariableIndex(name);
 }
 
@@ -226,17 +238,31 @@ void TPZMatPoissonCS<TVar>::Solution(const TPZVec<TPZMaterialDataT<TVar>> &datav
     const auto &dsolLoc = datavec[1].dsol[this->fPostProcIndex];
     const auto &solLag = datavec[2].sol[this->fPostProcIndex];
     const auto &dsolLag = datavec[2].dsol[this->fPostProcIndex];
+    fScale = 1.;
+    
 	if (var == ESolution){
         if (solGlo.size() > 0){
+            // if (datavec[0].x[0] >= 1. && datavec[0].x[0] <= 2. && solGlo.size() > 0){
+            //     fScale = 0.5;
+            // } else {
+            //     fScale = 1.;
+            // }
             solOut.Resize(solGlo.size());
+            // std::cout << "solGlo " << solGlo[0] << std::endl;
             for (int i=0; i<solGlo.size(); i++) {
-                solOut[i] = solGlo[i]/fScale;
+                solOut[i] = solGlo[i]*fScale;
             }
             return; 
         } else if (solLoc.size() > 0){
+            // if (datavec[1].x[0] >= 1. && datavec[1].x[0] <= 2. && solLoc.size() > 0){
+            //     fScale = 0.5;
+            // } else {
+            //     fScale = 1.;
+            // }
             solOut.Resize(solLoc.size());
+            // std::cout << "solLoc " << solLoc[0] << std::endl;
             for (int i=0; i<solLoc.size(); i++) {
-                solOut[i] = solLoc[i]/fScale;
+                solOut[i] = solLoc[i]*fScale;
             }
             return; 
         } else {
@@ -245,28 +271,25 @@ void TPZMatPoissonCS<TVar>::Solution(const TPZVec<TPZMaterialDataT<TVar>> &datav
 	}
     if (var == EDerivative) {
         if (solGlo.size() > 0){
-            solOut.Resize(fDim);
+            solOut.Resize(3);
             for (int i=0; i<fDim; i++) {
+                // std::cout << "solout 1 " << solOut[i] << std::endl;
                 solOut[i] = dsolGlo.GetVal(i,0)/fScale;
+                
             }
+            // std::cout << "solout 2 " << solOut[0] << std::endl;
             return;
         } else if (solLoc.size() > 0){
             solOut.Resize(fDim);
             for (int i=0; i<fDim; i++) {
                 solOut[i] = dsolLoc.GetVal(i,0)/fScale;
             }
+            // std::cout << "solloc 2 " << solOut[0] << std::endl;
             return;
         } else {
             DebugStop();
         }
     }
-    if (var == ELagrangeMult){
-        solOut.Resize(solLag.size());
-        for (int i=0; i<solLag.size(); i++) {
-            solOut[i] = solLag[i]/fScale;
-        }
-        return; 
-	}
 }
 
 template<class TVar>

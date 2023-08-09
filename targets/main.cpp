@@ -28,7 +28,8 @@
 #include "ArlequinApproxSpaceCreator.h"
 #include "TPZRefPatternDataBase.h"
 #include "TPZVTKGenerator.h"
-
+#include "pzmatred.h"
+#include "TPZArlequinSolver.h"
 
 
 /**
@@ -69,7 +70,7 @@ using namespace std;
 
 int main(int argc, char* argv[]){
     const int dim{2};
-    const int pOrder{1};
+    const int pOrder{2};
 
 #ifdef PZ_LOG
     TPZLogger::InitializePZLOG();
@@ -80,12 +81,15 @@ int main(int argc, char* argv[]){
 
 
     //Create Geometric meshes
-    TPZGeoMesh* gmeshCoarse = ReadMeshFromGmsh(string(MESHDIR)+"bar2d.msh");
+    // TPZGeoMesh* gmeshCoarse = ReadMeshFromGmsh(string(MESHDIR)+"bar2d.msh");
+    TPZGeoMesh* gmeshCoarse = ReadMeshFromGmsh(string(MESHDIR)+"holedplate.msh");
    
     ArlequinApproxSpaceCreator arlequinCreator(gmeshCoarse,pOrder);
     arlequinCreator.CreateGeoElements();
     gmeshCoarse = arlequinCreator.GeoMesh();
     arlequinCreator.RefineLocalModel();
+    arlequinCreator.RefineLocalModel();
+    // arlequinCreator.RefineLocalModel();
     // arlequinCreator.RefineLocalModel();
     // arlequinCreator.RefineLocalModel();
 
@@ -103,27 +107,30 @@ int main(int argc, char* argv[]){
     // TPZLinearAnalysis an(cmeshmulti,RenumType::ESloan);
     // TPZLinearAnalysis an(cmeshmulti,RenumType::ESloan);
     TPZLinearAnalysis an(cmeshmulti,RenumType::ENone);
-    TPZSkylineStructMatrix<REAL> matskl(cmeshmulti);
-    an.SetStructuralMatrix(matskl);
-    TPZStepSolver<STATE> step;
-    step.SetDirect(ELDLt);
-    an.SetSolver(step);
-    an.Run();
+    TPZArlequinSolver<STATE> Asolver(an,TPZArlequinSolver<STATE>::ENoCondense);
+    // TPZArlequinSolver<STATE> Asolver(an,TPZArlequinSolver<STATE>::EDefault);
+    Asolver.Solve();
+    
 
-    // an.Solution().Print("Sol",std::cout);
+    TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(cmeshmulti->MeshVector(), cmeshmulti);
+    {
+        const std::string plotfile = "myfile";//sem o .vtk no final
+        constexpr int vtkRes{0};
+        TPZVec<std::string> fields = {
+        "Solution",
+        "Derivative",};
+        auto vtk = TPZVTKGenerator(cmeshmulti, fields, plotfile, vtkRes);
+        vtk.Do();
+    }
+    // {
+    //     const std::string plotfile = "myfile2";//sem o .vtk no final
+    //     constexpr int vtkRes{0};
+    //     TPZVec<std::string> fields = {
+    //     "LagrangeMultiplier"};
+    //     auto vtk = TPZVTKGenerator(cmeshmulti, fields, plotfile, vtkRes);
+    //     vtk.Do();
+    // }
 
-    // TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(cmeshmulti->MeshVector(), cmeshmulti);
-    const std::string plotfile = "myfile";//sem o .vtk no final
-    constexpr int vtkRes{0};
-
-
-    TPZVec<std::string> fields = {
-    "Solution",
-    "Derivative",
-    "LagrangeMultiplier"};
-    auto vtk = TPZVTKGenerator(cmeshmulti, fields, plotfile, vtkRes);
-
-    vtk.Do();
     return 0;
 }
 
@@ -144,6 +151,7 @@ TPZGeoMesh* ReadMeshFromGmsh(std::string file_name)
         stringtoint[1]["Left"] = EDirichlet1;
         stringtoint[1]["Right"] = EDirichlet2;
         stringtoint[1]["Neumann"] = ENeumann;
+        stringtoint[1]["Circle"] = EDirichlet3;
 
         reader.SetDimNamePhysical(stringtoint);
         reader.GeometricGmshMesh(file_name,gmesh);

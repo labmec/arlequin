@@ -5,12 +5,14 @@ set(MATERIAL_HEADERS
     TPZMatPoissonCS.h
     TPZMixedDarcyFlowArlequin.h
     TPZMultiphysicsInterfaceElArlequin.h
+    TPZLagrangeMultiplierCSArlequin.h
   )
 
 set(MATERIAL_SRCS
     TPZMatPoissonCS.cpp
     TPZMixedDarcyFlowArlequin.cpp
     TPZMultiphysicsInterfaceElArlequin.cpp
+    TPZLagrangeMultiplierCSArlequin.cpp
   )
 
 
@@ -31,11 +33,15 @@ configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/arlequin_config.h.in" ${CONFIG_H})
 set(UTIL_HEADERS
   GmshFileWriter.h
   ArlequinApproxSpaceCreator.h
+  TPZArlequinMatRed.h
+  TPZArlequinSolver.h
   )
 
 set(UTIL_SRCS
   GmshFileWriter.cpp
   ArlequinApproxSpaceCreator.cpp
+  TPZArlequinMatRed.cpp
+  TPZArlequinSolver.cpp
   )
 
 target_sources(arlequin PRIVATE
